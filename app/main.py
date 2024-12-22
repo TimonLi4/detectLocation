@@ -7,7 +7,7 @@ import os
 import uvicorn
 
 from functions.analize_image import UPLOAD_FOLDER,RESULT_FOLDER
-from functions.analize_image import subImageInFile,process_image
+from functions.analize_image import subImageInFile,process_image,answer
 
 
 
@@ -76,6 +76,7 @@ async def get_image(image_name: str, request: Request):
         buildingPath = RESULT_FOLDER
         building_url = get_all_images(buildingPath,class_name[0])
 
+        answer_ = answer(json_data)
 
         return templates.TemplateResponse('photos.html', context={
             'request': request,
@@ -83,6 +84,7 @@ async def get_image(image_name: str, request: Request):
             'pointer_url':pointer_url,  # Используем URL
             'building_url':building_url,
             'json_data':json_data,
+            'answer': answer_,
             
         })
 

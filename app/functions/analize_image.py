@@ -3,6 +3,8 @@ import os
 import cv2
 from ultralytics import YOLO
 import shutil
+from g4f.client import Client
+
 
 base_path = os.getcwd()
 model_path = os.path.join(base_path,'app','bestv1.pt')
@@ -105,10 +107,36 @@ def subImageInFile(image_path):
             json_data[class_name][i] = {
                 
                 "probability": str(probability),
-                'read': read_image(file_path)
+                'text': read_image(file_path)
             }
 
     return json_data
+
+
+def request(content):
+    client = Client()
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": content}]
+    )
+    return response.choices[0].message.content
+
+def answer(data_json):
+    quation = ''
+    content = ''
+    content_pointer=''
+
+    if 'building' in data_json:
+        content = f"{', '.join(', '.join(data_json['building'][i]['text']) if data_json['building'][i]['text'] else '' for i in range(len(data_json['building'])))}"
+
+    if 'pointer' in data_json:
+        content_pointer = f"указатели{', '.join(', '.join(data_json['pointer'][i]['text']) if data_json['pointer'][i]['text'] else '' for i in range(len(data_json['pointer'])))}"
+
+    quation = f'Определи страну, и желательно город, если на фассадах здания написано: {content}, а на дорожных указателях {content_pointer}'
+
+    ANSWER = request(quation)
+
+    return ANSWER
 
 
 def read_image(file_path):
