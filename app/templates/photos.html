@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/photos.css">
+    <title>Photo Gallery</title>
+</head>
+<body>
+    <div class="container">
+        <!-- Section for Class 1 -->
+        <div class="class-section">
+            <h2 class="class-title">Main Image</h2>
+            <div class="gallery">
+                <div class="photo_main"><img src="{{image_url}}" width="70%" height="80%"></div>
+            </div>
+        </div>
+
+        <!-- Section for Class 2 -->
+        <div class="class-section">
+            <h2 class="class-title">Pointer: </h2>
+            
+            <div class="gallery">
+                {% for image in pointer_url %}
+                    <div class="gallery-item">
+                        <div class="photo">
+                            <img src="/static/images/result_class/pointer/{{ image }}">
+                        </div>
+                        <div class="probability">Probability: {{ json_data['pointer'][loop.index0]['probability'] }}</div>
+                        <div class="text__">Text: {{ json_data['pointer'][loop.index0]['read'] }}</div>
+                        </div>
+                    {% endfor %}
+            </div>
+        </div>
+
+        <!-- Section for Class 3 -->
+        <div class="class-section">
+            <h2 class="class-title">Building: </h2>
+            <div class="gallery">
+                    {% for image in building_url %}
+                    <div class="gallery-item">
+                        <div class="photo">
+                            <img src="/static/images/result_class/building/{{ image }}">
+                        </div>
+                        <div class="probability">Probability: {{ json_data['building'][loop.index0]['probability'] }}</div>
+                        <div class="text__">Text: {{ json_data['building'][loop.index0]['read'] }}</div>
+                        </div>
+                    {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f9;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.gallery {
+    display: flex;
+    flex-wrap: nowrap; /* Запрещаем перенос строк */
+    gap: 20px;
+    overflow-x: auto; /* Добавляем горизонтальную прокрутку для длинных строк */
+}
+
+.class-section {
+    margin-bottom: 0px;
+}
+
+.class-title {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #007bff;
+    display: inline-block;
+    padding-bottom: 5px;
+}
+
+.photo {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    width: 200px; /* Фиксированная ширина для предотвращения растягивания */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    align-self: flex-start;
+}
+
+.photo img {
+    width: 100%;
+    display: block;
+}
