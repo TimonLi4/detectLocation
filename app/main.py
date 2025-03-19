@@ -7,7 +7,7 @@ import os
 import uvicorn
 
 from functions.analize_image import UPLOAD_FOLDER,RESULT_FOLDER
-from functions.analize_image import subImageInFile,process_image,answer
+from functions.analize_image import subImageInFile,process_image,answer,PATH
 
 
 
@@ -68,15 +68,28 @@ async def get_image(image_name: str, request: Request):
         json_data = subImageInFile(image_path)
 
         print(json_data)
+        print(image_name)
+        
+        answer_ = answer(json_data)
+        # print(answer_)
+        lines = answer_.split('\n')  # Разделяем на строки
+        coords = lines[0].split(';')  # Разделяем координаты
+        longitude = coords[0].replace("Долгота: ", "").strip()  # "21.0122" L1
+        latitude = coords[1].replace("Широта: ", "").strip() # fi1
+
+        print(longitude,latitude)
+
+
+        # print(PATH(L1=longitude,fi1=latitude))
 
         pointerPath = RESULT_FOLDER
-        pointer_url = get_all_images(pointerPath,class_name[1])
+        pointer_url = get_all_images(pointerPath, 'pointer')
         
 
         buildingPath = RESULT_FOLDER
-        building_url = get_all_images(buildingPath,class_name[0])
+        building_url = get_all_images(buildingPath, 'building')
 
-        answer_ = answer(json_data)
+        
 
         return templates.TemplateResponse('photos.html', context={
             'request': request,
@@ -90,58 +103,7 @@ async def get_image(image_name: str, request: Request):
 
 
 
-# @app.get("/images/{image_name}")
-# async def get_image(image_name: str,request:Request,response_class = HTMLResponse):
-#     image_path = os.path.join(UPLOAD_FOLDER, image_name)
-#     print('image_path:  ',image_path)
-    
-
-#     if os.path.exists(image_path):
-#         # result_image_path = subImageInFile(image_path)
-#         result_image_path = process_image(image_path)
-#         print('result: ', result_image_path)
-
-#     return templates.TemplateResponse('photos.html',context={
-#                                               'request':request,
-#                                               'image_url':f'{result_image_path}',
-                                            
-#                                             })
-
-
-# @app.get(/)
-# async def display_images(request:Request):
-
-
-
-
 if __name__ == '__main__':
     uvicorn.run('main:app', reload=True)
 
 
-# @app.get("/images/{image_name}")
-# async def get_image(image_name: str,request:Request,response_class = HTMLResponse):
-#     # Получаем путь к исходному изображению
-#     image_path = os.path.join(UPLOAD_FOLDER, image_name)
-    
-#     # Если изображение существует, обработаем его и отдадим результат
-#     if os.path.exists(image_path):
-#         result_image_path = subImageInFile(image_path)
-#         result_image_path = process_image(image_path)
-
-#         pointer_list = os.listdir(r'C:\Users\Timon\Desktop\MyCourse\api\app\result_class\pointer')
-#         building_list = os.listdir(r'C:\Users\Timon\Desktop\MyCourse\api\app\result_class\building')
-
-        
-
-#         return templates.TemplateResponse('photos.html',context={
-#                                               'request':request,
-#                                               'images':{                                 
-#                                             'pointer':pointer_list, 
-#                                             'building':building_list,
-#                                                         },
-#                                                 'path': r'C:\Users\Timon\Desktop\MyCourse\api\app\result_class'
-                                            
-#                                             })
-    
-    
-#     return {"message": "Image not found"}

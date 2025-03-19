@@ -3,11 +3,13 @@ import os
 import cv2
 from ultralytics import YOLO
 import shutil
-from g4f.client import Client
+# from g4f.client import Client
+import ollama
+from math import cos,acos,sin
 
 
 base_path = os.getcwd()
-model_path = os.path.join(base_path,'app','bestv1.pt')
+model_path = os.path.join(base_path,'detectLocation','app','bestv1.pt')
 reader = easyocr.Reader(['en','de','pl'], gpu=False)
 
 
@@ -27,7 +29,6 @@ def reset_class_folders(class_names, result_folder):
         
         # Удаляем старую папку, если она существует
         if os.path.exists(class_dir):
-            import shutil
             shutil.rmtree(class_dir)
         
         # Создаем новую папку для текущего класса
@@ -49,20 +50,13 @@ def process_image(image_path):
 
 
 
-import cv2
-import os
-import json as json_module  # Избегаем конфликта с именем переменной json
-from pathlib import Path
-
-
-
 def subImageInFile(image_path):
     # Загружаем изображение
     image = cv2.imread(image_path)
     height, width, _ = image.shape
 
     # Предсказания модели
-    result = model.predict(source=image, conf=0.5, save=False, show=False)
+    result = model.predict(source=image, conf=0.8, save=False, show=False)
     detections = result[0].boxes.xyxy
     labels = result[0].boxes.cls
     probabilities = result[0].boxes.conf
@@ -73,6 +67,10 @@ def subImageInFile(image_path):
 
     # JSON-структура для сохранения результатов
     json_data = {}
+
+    # Счетчики для каждой категории (используем defaultdict для избежания KeyError)
+    from collections import defaultdict
+    class_counters = defaultdict(int)  # По умолчанию 0 для любого ключа
 
     for i, box in enumerate(detections):
         x1, y1, x2, y2 = map(int, box)
@@ -86,15 +84,24 @@ def subImageInFile(image_path):
 
             # Класс объекта
             class_id = int(labels[i])
-            class_name = class_names[class_id]
+            try:
+                class_name = class_names[class_id]
+            except IndexError:
+                print(f"Warning: class_id {class_id} out of range for class_names {class_names}")
+                continue  # Пропускаем некорректный class_id
+
             probability = round(float(probabilities[i]) * 100, 2)  # Преобразуем вероятность в %
+
+            # Увеличиваем счетчик для данной категории
+            class_counters[class_name] += 1
+            object_index = class_counters[class_name]
 
             # Директория для сохранения
             class_dir = os.path.join(RESULT_FOLDER, class_name)
             os.makedirs(class_dir, exist_ok=True)  # Создаем папку, если её нет
 
-            # Путь к файлу
-            file_name = f"object_{i+1}.jpg"
+            # Путь к файлу с уникальным именем для каждой категории
+            file_name = f"{class_name}_{object_index}.jpg"
             file_path = os.path.join(class_dir, file_name)
 
             # Сохраняем обрезанное изображение
@@ -104,22 +111,27 @@ def subImageInFile(image_path):
             if class_name not in json_data:
                 json_data[class_name] = {}
 
-            json_data[class_name][i] = {
-                
+            json_data[class_name][object_index] = {
                 "probability": str(probability),
-                'text': read_image(file_path)
+                "text": read_image(file_path)
             }
 
     return json_data
 
 
+# def request(content):
+#     client = Client()
+#     response = client.chat.completions.create(
+#         model="gpt-3.5-turbo",
+#         messages=[{"role": "user", "content": content}]
+#     )
+#     return response.choices[0].message.content
+
+
 def request(content):
-    client = Client()
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": content}]
-    )
-    return response.choices[0].message.content
+    response = ollama.chat(model="mistral", messages=[{"role": "user", "content": f"{content}"}])
+    return response["message"]["content"]
+
 
 def answer(data_json):
     quation = ''
@@ -127,12 +139,20 @@ def answer(data_json):
     content_pointer=''
 
     if 'building' in data_json:
-        content = f"{', '.join(', '.join(data_json['building'][i]['text']) if data_json['building'][i]['text'] else '' for i in range(len(data_json['building'])))}"
+        content = ', '.join(
+        ', '.join(item['text']) if item['text'] else ''
+        for item in data_json['building'].values()
+        )
 
     if 'pointer' in data_json:
-        content_pointer = f"указатели{', '.join(', '.join(data_json['pointer'][i]['text']) if data_json['pointer'][i]['text'] else '' for i in range(len(data_json['pointer'])))}"
+        content_pointer = ', '.join(
+        ', '.join(item['text']) if item['text'] else ''
+        for item in data_json['pointer'].values()
+        )
 
-    quation = f'Определи страну, и желательно город, если на фассадах здания написано: {content}, а на дорожных указателях {content_pointer}'
+    # quation = f'Определи страну, и желательно город, если на фассадах здания написано: {content}, а на дорожных указателях {content_pointer}',
+    # quation = f'напиши только широту и долготу этого места, если на фассадах здания написано: {content}, а на дорожных указателях {content_pointer}'
+    quation = f'Напиши долготу и широту этого места в формате "Долгота: [значение]; Широта: [значение]" на первой строке, а на следующей строке добавь комментарии, если на фасадах здания написано: {content}, а на дорожных указателях: {content_pointer}'
 
     ANSWER = request(quation)
 
@@ -156,41 +176,7 @@ def read_image(file_path):
     return text_data
 
 
-# def subImageInFile(image_path):
-#     image = cv2.imread(image_path)
-#     json = {}
-#     height, width, _ = image.shape
-
-#     result = model.predict(source=image, conf=0.5, save=False, show=False)
-
-#     detections = result[0].boxes.xyxy
-#     labels = result[0].boxes.cls
-#     class_names = model.names
-
-#     reset_class_folders(class_names,RESULT_FOLDER)  # Создаем новую папку
-
-
-#     for i, box in enumerate(detections):
-#         x1, y1, x2, y2 = map(int, box)
-
-#         # Ensure the bounding box is within image bounds
-#         x1, y1, x2, y2 = max(0, x1), max(0, y1), min(width, x2), min(height, y2)
-
-#         if x2 > x1 and y2 > y1:
-#             cropped = image[y1:y2, x1:x2]  # Crop the image
-
-#             class_id = int(labels[i])
-#             class_name = class_names[class_id]
-
-#             # Create the directory for the class if it doesn't exist
-#             class_dir = os.path.join(RESULT_FOLDER, class_name)
-            
-
-#             # Сохраняем изображение в новую папку
-#             file_path = os.path.join(class_dir, f"object_{i+1}.jpg")
-#             cv2.imwrite(file_path, cropped)
-
-
-#             # print(f"Saved cropped image to: {file_path}")
+def PATH(fi1,L1,fi2,L2):
+    return 111.2*acos(sin(fi1)*sin(fi2)+cos(fi1)*cos(fi2)*cos(L2-L1))
 
 
